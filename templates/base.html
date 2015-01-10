@@ -3,6 +3,8 @@
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
 	    <meta charset="utf-8">
 		<title>Drive Me</title>
+		<link rel="stylesheet" href="/static/bower/bootstrap/dist/css/bootstrap.min.css">
+		<link rel="stylesheet" href="/static/bower/bootstrap/dist/css/bootstrap-theme.min.css">
 		<link rel="stylesheet" href="/static/css/driveme.css">
 		{% block extra_head %}{% endblock %}
 	</head>
@@ -11,6 +13,8 @@
 
 		<footer>Drive Me v{{ version }} created by Glen Baker and Adam Clark &copy;2015</footer>
 		
+		<script src='/static/bower/jquery/dist/jquery.min.js' type='text/javascript'></script>
+		<script src='/static/bower/bootstrap/dist/js/bootstrap.min.js' type='text/javascript'></script>
 		{% block extra_js %}{% endblock %}
 	</body>
 </HTML>

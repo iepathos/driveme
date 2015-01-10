@@ -33,7 +33,7 @@
       <option value="los angeles, ca">Los Angeles</option>
     </select>
     </div>
-	<div id="map-canvas"></div>
+	<div id="map-canvas" class='pull-left'></div>
 
 	<div id="pano"></div>
 {% endblock %}
@@ -87,7 +87,7 @@
 			// We are going to step through each lat,lng coordinate in teh overview_path array
 			// and on a timer activate createStreetPanorama to advance to next location along the route
 			// later we will add some controls in to control things such as pause and fast forward
-			
+
 		}
 
 		function createStreetPanorama(lat, lng) {
