@@ -81,15 +81,6 @@
 		  });
 		}
 
-		function driveRoute(overview_path) {
-			// expects an array of lat and lng coordinates along a route
-			createStreetPanorama(overview_path[0]['k'], overview_path[0]['D']);
-			// We are going to step through each lat,lng coordinate in teh overview_path array
-			// and on a timer activate createStreetPanorama to advance to next location along the route
-			// later we will add some controls in to control things such as pause and fast forward
-
-		}
-
 		function createStreetPanorama(lat, lng) {
 			var latLng = new google.maps.LatLng(lat, lng);
 			var mapOptions = {
@@ -109,10 +100,49 @@
 		}
 
 		google.maps.event.addDomListener(window, 'load', initialize);
-	</script>
+		
+		function setCorrectingInterval(func, delay) {
+		  if (!(this instanceof setCorrectingInterval)) {
+		    return new setCorrectingInterval(func, delay);
+		  }
 
+		  var target = (new Date().valueOf()) + delay;
+		  var that = this;
 
-	<script type="text/javascript">
+		  function tick() {
+		    if (that.stopped) return;
 
+		    target += delay;
+		    func();
+
+		    setTimeout(tick, target - (new Date().valueOf()));
+		  };
+
+		  setTimeout(tick, delay);
+		};
+
+		function driveRoute(overview_path) {
+			// expects an array of lat and lng coordinates along a route
+			routeStep = 0;
+			
+			// We are going to step through each lat,lng coordinate in the overview_path array
+			// and on a timer activate createStreetPanorama to advance to next location along the route
+			// later we will add some controls in to control things such as pause and fast forward
+			// setCorrectingInterval(function(){
+			// 	// advance panorama along route
+			// 	if (routeStep > overview_path.length) {
+			// 		createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D']);
+			// 		routeStep++; 
+			// 	} else {
+			// 		return;
+			// 	};
+
+			// }, 1000);
+			setInterval(function(){
+				createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D']);
+				routeStep++; 
+			}, 1000);
+
+		}
 	</script>
 {% endblock %}
