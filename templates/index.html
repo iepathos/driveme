@@ -167,5 +167,13 @@
 			$('#stopBtn').show();
 		});
 
+		$(document).on('click', '#pano', function(event){
+			event.preventDefault();
+
+			clearCorrectingInterval(intervalVar);
+			$('#stopBtn').hide();
+			$('#startBtn').show();
+		});
+
 	</script>
 {% endblock %}
