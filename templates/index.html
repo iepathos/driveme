@@ -54,10 +54,12 @@
 		// Map Initialization and Routing 
 	  	var directionsDisplay;
 		var directionsService = new google.maps.DirectionsService();
+		var streetViewService = new google.maps.StreetViewService();
 		var map;
 		var intervalVar;
 		var routeStep;
 		var routePath;
+		var currentPano;
 
 
 		function initialize() {
@@ -91,6 +93,8 @@
 		    	if (intervalVar != null) {
 		    		clearCorrectingInterval(intervalVar);
 		    	}
+		    	currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+								getCurrentStepBearing());
 		    	driveRoute();
 		    }
 		  });
@@ -140,7 +144,21 @@
 		}
 
 		function driveRoute() {
-			// expects an array of lat and lng coordinates along a route
+			// Drives along a route
+			$('#startBtn').hide();
+			$('#forwardBtn').hide();
+			$('#backwardBtn').hide();
+
+			$('#stopBtn').show();
+			stepForward();
+
+			intervalVar = setCorrectingInterval(function(){
+				crawlForward(); 
+			}, 1000);
+		}
+
+		function hopRoute() {
+			// Hops along route using the overview_path provided by Google Maps on the route API
 			$('#startBtn').hide();
 			$('#forwardBtn').hide();
 			$('#backwardBtn').hide();
@@ -164,15 +182,46 @@
 			$('#startBtn').show();
 		}
 
+		function headingDiff(link) {
+			return Math.abs(getCurrentStepBearing()%360 - link.heading);
+		}
+
+		function crawlForward() {
+			// move based on heading
+			
+			var curr;
+			for (i = 0; i < currentPano.links.length; i++) {
+				if (curr == undefined) {
+					curr = currentPano.links[i];
+				}
+
+				if (headingDiff(curr) > headingDiff(currentPano.links[i])) {
+					curr = curr = currentPano.links[i];
+				}
+			}
+
+			streetViewService.getPanoramaById(curr.pano, loadNextPano);			
+		}
+
+		function loadNextPano(data, status) {
+			var position = data.location.latLng;
+			currentPano.setPosition(data.location.latLng);
+		}
+
+		function updateStep() {
+			// check coordinates of currentPano and compare to current routeStep
+			// if currentPano location is further along route than the current routeStep, advance routeStep
+		}
+
 		function stepForward() {
 			routeStep++;
-			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+			currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
 								getCurrentStepBearing());
 		}
 
 		function stepBackward() {
 			routeStep--;
-			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+			currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
 								 getCurrentStepBearing());
 		}
 
