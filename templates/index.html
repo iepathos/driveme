@@ -85,9 +85,7 @@
 
 		      var directionRoutes = response.routes;
 		      routePath = directionRoutes[0].overview_path;
-		      // if (DEBUG == true) { console.log(routePath[0]['k'], routePath[0]['D']); }
-
-		      driveRoute(routePath);
+		      driveRoute();
 		      $('#stopBtn').show();
 		    }
 		  });
@@ -138,7 +136,7 @@
 		  interval.stopped = true;
 		}
 
-		function driveRoute(overview_path) {
+		function driveRoute() {
 			// expects an array of lat and lng coordinates along a route
 			stepForward();
 			// We are going to step through each lat,lng coordinate in the overview_path array
@@ -219,7 +217,7 @@
 		$(document).on('click', '#startBtn', function(event){
 			event.preventDefault();
 
-			driveRoute(routePath);
+			driveRoute();
 			$('#startBtn').hide();
 			$('#forwardBtn').hide();
 			$('#backwardBtn').hide();
