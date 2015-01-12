@@ -140,18 +140,12 @@
 
 		function driveRoute(overview_path) {
 			// expects an array of lat and lng coordinates along a route
-			createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D'], 
-								 getBearing(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
-								 			overview_path[routeStep+1]['k'], overview_path[routeStep+1]['D']));
-			routeStep++;
+			stepForward();
 			// We are going to step through each lat,lng coordinate in the overview_path array
 			// and on a timer activate createStreetPanorama to advance to next location along the route
 			// later we will add some controls in to control things such as pause and fast forward
 			intervalVar = setCorrectingInterval(function(){
-				createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
-									 getBearing(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
-									 			overview_path[routeStep+1]['k'], overview_path[routeStep+1]['D']));
-				routeStep++; 
+				stepForward(); 
 			}, 2000);
 		}
 
