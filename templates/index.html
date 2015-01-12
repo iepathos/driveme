@@ -93,7 +93,7 @@
 		  });
 		}
 
-		function createStreetPanorama(lat, lng) {
+		function createStreetPanorama(lat, lng, heading) {
 			var latLng = new google.maps.LatLng(lat, lng);
 			var mapOptions = {
 		    	center: latLng,
@@ -103,12 +103,13 @@
 		  	var panoramaOptions = {
 		    	position: latLng,
 		    	pov: {
-		      		heading: 34,
+		      		heading: heading,
 		      		pitch: 10
 		    	}
 		  	};
 		  	var panorama = new google.maps.StreetViewPanorama(document.getElementById('pano'), panoramaOptions);
 		  	map.setStreetView(panorama);
+		  	return panorama
 		}
 
 		google.maps.event.addDomListener(window, 'load', initialize);
@@ -139,29 +140,73 @@
 
 		function driveRoute(overview_path) {
 			// expects an array of lat and lng coordinates along a route
-			createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D']);
+			createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D'], 
+								 getBearing(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
+								 			overview_path[routeStep+1]['k'], overview_path[routeStep+1]['D']));
 			routeStep++;
 			// We are going to step through each lat,lng coordinate in the overview_path array
 			// and on a timer activate createStreetPanorama to advance to next location along the route
 			// later we will add some controls in to control things such as pause and fast forward
 			intervalVar = setCorrectingInterval(function(){
-				createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D']);
+				createStreetPanorama(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
+									 getBearing(overview_path[routeStep]['k'], overview_path[routeStep]['D'],
+									 			overview_path[routeStep+1]['k'], overview_path[routeStep+1]['D']));
 				routeStep++; 
 			}, 2000);
 		}
 
 		function stepForward() {
 			routeStep++;
-			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D']);
+			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+								getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
+									 	   routePath[routeStep+1]['k'], routePath[routeStep+1]['D']));
 		}
 
 		function stepBackward() {
 			routeStep--;
-			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D']);
+			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+								 getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
+									 		routePath[routeStep+1]['k'], routePath[routeStep+1]['D']));
 		}
 
+		/**
+		* Calculate the bearing between two positions as a value from 0-360
+		*
+		* @param lat1 - The latitude of the first position
+		* @param lng1 - The longitude of the first position
+		* @param lat2 - The latitude of the second position
+		* @param lng2 - The longitude of the second position
+		*
+		* @return int - The bearing between 0 and 360
+		*/
 		function getBearing(lat1, lng1, lat2, lng2) {
-			// Returns the bearing from one set of coordinates to another
+			var dLon = (lng2-lng1);
+			var y = Math.sin(dLon) * Math.cos(lat2);
+			var x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+			var brng = this._toDeg(Math.atan2(y, x));
+			return 360 - ((brng + 360) % 360);
+		}
+
+		/**
+		* Since not all browsers implement this we have our own utility that will
+		* convert from degrees into radians
+		*
+		* @param deg - The degrees to be converted into radians
+		* @return radians
+		*/
+		function _toRad(deg) {
+			return deg * Math.PI / 180;
+		}
+
+		/**
+		* Since not all browsers implement this we have our own utility that will
+		* convert from radians into degrees
+		*
+		* @param rad - The radians to be converted into degrees
+		* @return degrees
+		*/
+		function _toDeg(rad) {
+			return rad * 180 / Math.PI;
 		}
 
 		
