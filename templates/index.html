@@ -167,15 +167,18 @@
 		function stepForward() {
 			routeStep++;
 			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
-								getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
-									 	   routePath[routeStep+1]['k'], routePath[routeStep+1]['D']));
+								getCurrentStepBearing());
 		}
 
 		function stepBackward() {
 			routeStep--;
 			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
-								 getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
-									 		routePath[routeStep+1]['k'], routePath[routeStep+1]['D']));
+								 getCurrentStepBearing());
+		}
+
+		function getCurrentStepBearing() {
+			return getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
+							  routePath[routeStep+1]['k'], routePath[routeStep+1]['D']);
 		}
 
 		/**
@@ -221,7 +224,7 @@
 		$(document).on('click', '#startBtn', function(event){
 			driveRoute();
 		});
-		
+
 		$(document).on('click', '#stopBtn', function(event){
 			stopRoute();
 		});
