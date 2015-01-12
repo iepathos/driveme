@@ -218,13 +218,16 @@
 			return rad * 180 / Math.PI;
 		}
 		
-
+		$(document).on('click', '#startBtn', function(event){
+			driveRoute();
+		});
+		
 		$(document).on('click', '#stopBtn', function(event){
 			stopRoute();
 		});
 
-		$(document).on('click', '#startBtn', function(event){
-			driveRoute();
+		$(document).on('click', '#pano', function(event){
+			stopRoute();
 		});
 
 		$(document).on('click', '#forwardBtn', function(event){
@@ -233,10 +236,6 @@
 
 		$(document).on('click', '#backwardBtn', function(event){
 			stepBackward();
-		});
-
-		$(document).on('click', '#pano', function(event){
-			stopRoute();
 		});
 
 	</script>
