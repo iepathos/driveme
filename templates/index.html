@@ -40,6 +40,7 @@
 	<button id='startBtn' class='btn btn-success btn-lg' style='display: none;'>Start</button>
 	<button id='stopBtn' class='btn btn-danger btn-lg' style='display: none;'>Stop</button>
 
+	<button id='backwardBtn' class='btn btn-primary btn-lg' style='display: none;'>Step Back</button>
 	<button id='forwardBtn' class='btn btn-primary btn-lg' style='display: none;'>Step Forward</button>
 		
 {% endblock %}
@@ -154,6 +155,11 @@
 			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D']);
 		}
 
+		function stepBackward() {
+			routeStep--;
+			createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D']);
+		}
+
 		function getBearing(lat1, lng1, lat2, lng2) {
 			// Returns the bearing from one set of coordinates to another
 		}
@@ -166,6 +172,7 @@
 			clearCorrectingInterval(intervalVar);
 			$('#stopBtn').hide();
 
+			$('#backwardBtn').show();
 			$('#forwardBtn').show();
 			$('#startBtn').show();
 		});
@@ -176,6 +183,7 @@
 			driveRoute(routePath);
 			$('#startBtn').hide();
 			$('#forwardBtn').hide();
+			$('#backwardBtn').hide();
 
 			$('#stopBtn').show();
 		});
@@ -186,12 +194,19 @@
 			stepForward();
 		});
 
+		$(document).on('click', '#backwardBtn', function(event){
+			event.preventDefault();
+
+			stepBackward();
+		});
+
 		$(document).on('click', '#pano', function(event){
 			event.preventDefault();
 
 			clearCorrectingInterval(intervalVar);
 			$('#stopBtn').hide();
 
+			$('#backwardBtn').show();
 			$('#forwardBtn').show();
 			$('#startBtn').show();
 		});
