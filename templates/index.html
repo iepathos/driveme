@@ -93,8 +93,11 @@
 		    	if (intervalVar != null) {
 		    		clearCorrectingInterval(intervalVar);
 		    	}
-		    	currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
+
+		    	if (currentPano == undefined) {
+		    		currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
 								getCurrentStepBearing());
+		    	}
 		    	driveRoute();
 		    }
 		  });
@@ -154,7 +157,7 @@
 
 			intervalVar = setCorrectingInterval(function(){
 				crawlForward(); 
-			}, 1000);
+			}, 500);
 		}
 
 		function hopRoute() {
@@ -188,7 +191,7 @@
 
 		function crawlForward() {
 			// move based on heading
-			
+
 			var curr;
 			for (i = 0; i < currentPano.links.length; i++) {
 				if (curr == undefined) {
@@ -206,6 +209,7 @@
 		function loadNextPano(data, status) {
 			var position = data.location.latLng;
 			currentPano.setPosition(data.location.latLng);
+			map.setStreetView(currentPano);
 		}
 
 		function updateStep() {
