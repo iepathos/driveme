@@ -1,298 +1,358 @@
 {% extends 'base.html' %}
 
+{% block extra_head %}
+
+{% endblock %}
+
 {% block content %}
-	<div id="panel">
-    <b>Start: </b>
-    <select id="start" onchange="calcRoute();">
-      <option value="chicago, il">Chicago</option>
-      <option value="st louis, mo">St Louis</option>
-      <option value="joplin, mo">Joplin, MO</option>
-      <option value="oklahoma city, ok">Oklahoma City</option>
-      <option value="amarillo, tx">Amarillo</option>
-      <option value="gallup, nm">Gallup, NM</option>
-      <option value="flagstaff, az">Flagstaff, AZ</option>
-      <option value="winona, az">Winona</option>
-      <option value="kingman, az">Kingman</option>
-      <option value="barstow, ca">Barstow</option>
-      <option value="san bernardino, ca">San Bernardino</option>
-      <option value="los angeles, ca">Los Angeles</option>
-    </select>
-    <b>End: </b>
-    <select id="end" onchange="calcRoute();">
-      <option value="chicago, il">Chicago</option>
-      <option value="st louis, mo">St Louis</option>
-      <option value="joplin, mo">Joplin, MO</option>
-      <option value="oklahoma city, ok">Oklahoma City</option>
-      <option value="amarillo, tx">Amarillo</option>
-      <option value="gallup, nm">Gallup, NM</option>
-      <option value="flagstaff, az">Flagstaff, AZ</option>
-      <option value="winona, az">Winona</option>
-      <option value="kingman, az">Kingman</option>
-      <option value="barstow, ca">Barstow</option>
-      <option value="san bernardino, ca">San Bernardino</option>
-      <option value="los angeles, ca">Los Angeles</option>
-    </select>
-    </div>
-	<div id="map-canvas" class='pull-left'></div>
-
-	<div id="pano" class='pull-left'></div>
-
-	<button id='startBtn' class='btn btn-success btn-lg' style='display: none;'>Start</button>
-	<button id='stopBtn' class='btn btn-danger btn-lg' style='display: none;'>Stop</button>
-
-	<button id='backwardBtn' class='btn btn-primary btn-lg' style='display: none;'>Step Back</button>
-	<button id='forwardBtn' class='btn btn-primary btn-lg' style='display: none;'>Step Forward</button>
+	<div id="pano" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index:-1;"></div>
+	<div id="controls">
+		<div id="map" style="width: 400px; height: 300px; float: left; padding: 0;"></div>
+		<div id="controls" style="">
+			<form id="map_form">
+				<input type="text" name="address" id="address" />
+				<button type="submit" id="searchButton" >Search</button>
+			</form>
+		</div>
+		<div id="text" style="width: 500px; height: 120px; float: left; padding-top: 10px; z-index:0; border-style:solid; border-width:medium;"></div>
+	</div>
 		
 {% endblock %}
 
 {% block extra_js %}
 	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}"></script>
-	<script type="text/javascript">
-		var DEBUG = true;
-
-
-		// Map Initialization and Routing 
-	  	var directionsDisplay;
-		var directionsService = new google.maps.DirectionsService();
-		var streetViewService = new google.maps.StreetViewService();
-		var map;
-		var intervalVar;
-		var routeStep;
-		var routePath;
-		var currentPano;
-
-
-		function initialize() {
-		  directionsDisplay = new google.maps.DirectionsRenderer();
-		  var chicago = new google.maps.LatLng(41.850033, -87.6500523);
-		  var mapOptions = {
-		    zoom:7,
-		    center: chicago
-		  };
-		  map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-		  directionsDisplay.setMap(map);
+	<script src="/static/js/dat.gui.min.js"></script>
+	<script src="/static/js/three.min.js"></script>
+	<script src="/static/js/GSVPano.js"></script>
+	<script src="/static/js/Hyperlapse.js"></script>
+	<script> 
+	
+		var start_point = new google.maps.LatLng(44.3431,6.783936);
+		var end_point = new google.maps.LatLng(44.340578,6.782684);
+		var lookat_point = new google.maps.LatLng(44.34232747290594, 6.786460550292986);
+		var map, directions_renderer, directions_service, streetview_service, geocoder;
+		var start_pin, end_pin, pivot_pin, camera_pin;
+		var _elevation = 0;
+		var _route_markers = [];
+		function show(msg) {
+			document.getElementById("text").innerHTML = msg;
 		}
-
-		google.maps.event.addDomListener(window, 'load', initialize);
-
-		function calcRoute() {
-		  var start = document.getElementById('start').value;
-		  var end = document.getElementById('end').value;
-		  var request = {
-		      origin:start,
-		      destination:end,
-		      travelMode: google.maps.TravelMode.DRIVING
-		  };
-		  directionsService.route(request, function(response, status) {
-		    if (status == google.maps.DirectionsStatus.OK) {
-		    	directionsDisplay.setDirections(response);
-
-		    	var directionRoutes = response.routes;
-		    	routePath = directionRoutes[0].overview_path;
-		    	routeStep = 0;
-		    	if (intervalVar != null) {
-		    		clearCorrectingInterval(intervalVar);
-		    	}
-
-		    	if (currentPano == undefined) {
-		    		currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
-								getCurrentStepBearing());
-		    	}
-		    	driveRoute();
-		    }
-		  });
-		}
-
-		function createStreetPanorama(lat, lng, heading) {
-			var latLng = new google.maps.LatLng(lat, lng);
-			var mapOptions = {
-		    	center: latLng,
-		    	zoom: 14
-		  	};
-		  	// var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-		  	var panoramaOptions = {
-		    	position: latLng,
-		    	pov: {
-		      		heading: heading,
-		      		pitch: 10
-		    	}
-		  	};
-		  	var panorama = new google.maps.StreetViewPanorama(document.getElementById('pano'), panoramaOptions);
-		  	map.setStreetView(panorama);
-		  	return panorama
-		}
-
-		function setCorrectingInterval(func, delay) {
-		  if (!(this instanceof setCorrectingInterval)) {
-		    return new setCorrectingInterval(func, delay);
-		  }
-
-		  var target = (new Date().valueOf()) + delay;
-		  var that = this;
-
-		  function tick() {
-		    if (that.stopped) return;
-
-		    target += delay;
-		    func();
-
-		    setTimeout(tick, target - (new Date().valueOf()));
-		  };
-
-		  setTimeout(tick, delay);
-		};
-
-		function clearCorrectingInterval(interval) {
-		  interval.stopped = true;
-		}
-
-		function driveRoute() {
-			// Drives along a route
-			$('#startBtn').hide();
-			$('#forwardBtn').hide();
-			$('#backwardBtn').hide();
-
-			$('#stopBtn').show();
-			stepForward();
-
-			intervalVar = setCorrectingInterval(function(){
-				crawlForward(); 
-			}, 500);
-		}
-
-		function hopRoute() {
-			// Hops along route using the overview_path provided by Google Maps on the route API
-			$('#startBtn').hide();
-			$('#forwardBtn').hide();
-			$('#backwardBtn').hide();
-
-			$('#stopBtn').show();
-			stepForward();
-			// We are going to step through each lat,lng coordinate in the overview_path array
-			// and on a timer activate createStreetPanorama to advance to next location along the route
-			// later we will add some controls in to control things such as pause and fast forward
-			intervalVar = setCorrectingInterval(function(){
-				stepForward(); 
-			}, 2000);
-		}
-
-		function stopRoute() {
-			clearCorrectingInterval(intervalVar);
-			$('#stopBtn').hide();
-
-			$('#backwardBtn').show();
-			$('#forwardBtn').show();
-			$('#startBtn').show();
-		}
-
-		function headingDiff(link) {
-			return Math.abs(getCurrentStepBearing()%360 - link.heading);
-		}
-
-		function crawlForward() {
-			// move based on heading
-
-			var curr;
-			for (i = 0; i < currentPano.links.length; i++) {
-				if (curr == undefined) {
-					curr = currentPano.links[i];
-				}
-
-				if (headingDiff(curr) > headingDiff(currentPano.links[i])) {
-					curr = curr = currentPano.links[i];
-				}
+		function init() {
+			if( window.location.hash ) {
+				parts = window.location.hash.substr( 1 ).split( ',' );
+				start_point = new google.maps.LatLng(parts[0], parts[1]);
+				lookat_point = new google.maps.LatLng(parts[2], parts[3]);
+				end_point = new google.maps.LatLng(parts[4], parts[5]);
+				_elevation = parts[6] || 0;
+			} 
+			/* Map */
+			function snapToRoad(point, callback) {
+				var request = { origin: point, destination: point, travelMode: google.maps.TravelMode["DRIVING"] };
+				directions_service.route(request, function(response, status) {
+					if(status=="OK") callback(response.routes[0].overview_path[0]);
+					else callback(null);
+				});
 			}
-
-			streetViewService.getPanoramaById(curr.pano, loadNextPano);			
+			function changeHash() {
+				window.location.hash = start_pin.getPosition().lat() + ',' + start_pin.getPosition().lng() + ','
+					+ pivot_pin.getPosition().lat() + ',' + pivot_pin.getPosition().lng() + ','
+					+ end_pin.getPosition().lat() + ',' + end_pin.getPosition().lng() + ','
+					+ _elevation;
+			}
+			var mapOpt = { 
+				mapTypeId: google.maps.MapTypeId.ROADMAP,
+				center: start_point,
+				zoom: 15
+			};
+			map = new google.maps.Map(document.getElementById("map"), mapOpt);
+			geocoder = new google.maps.Geocoder();
+			var overlay = new google.maps.StreetViewCoverageLayer();
+			overlay.setMap(map);
+			directions_service = new google.maps.DirectionsService();
+			directions_renderer = new google.maps.DirectionsRenderer({draggable:false, markerOptions:{visible: false}});
+			directions_renderer.setMap(map);
+			directions_renderer.setOptions({preserveViewport:true});
+			camera_pin = new google.maps.Marker({
+				position: start_point,
+				map: map
+			});
+			start_pin = new google.maps.Marker({
+				position: start_point,
+				draggable: true,
+				map: map
+			});
+			google.maps.event.addListener (start_pin, 'dragend', function (event) {
+				snapToRoad(start_pin.getPosition(), function(result) {
+					start_pin.setPosition(result);
+					start_point = result;
+					changeHash();
+				});
+			});
+			end_pin = new google.maps.Marker({
+				position: end_point,
+				draggable: true,
+				map: map
+			});
+			google.maps.event.addListener (end_pin, 'dragend', function (event) {
+				snapToRoad(end_pin.getPosition(), function(result) {
+					end_pin.setPosition(result);
+					end_point = result;
+					changeHash();
+				});
+			});
+			pivot_pin = new google.maps.Marker({
+				position: lookat_point,
+				draggable: true,
+				map: map
+			});
+			google.maps.event.addListener (pivot_pin, 'dragend', function (event) {
+				hyperlapse.setLookat( pivot_pin.getPosition() );
+				changeHash();
+			});
+			function findAddress(address) {
+				geocoder.geocode( { 'address': address}, function(results, status) {
+					if (status == google.maps.GeocoderStatus.OK) {
+						map.setCenter(results[0].geometry.location);
+						o.drop_pins();
+					} else {
+						show( "Geocode was not successful for the following reason: " + status );
+					}
+				});
+			}
+			var search = document.getElementById( 'searchButton' );
+			search.addEventListener( 'click', function( event ) {
+				event.preventDefault();
+				findAddress( document.getElementById("address").value );
+			}, false );
+			/* Hyperlapse */
+			var pano = document.getElementById('pano');
+			var is_moving = false;
+			var px, py;
+			var onPointerDownPointerX=0, onPointerDownPointerY=0;
+			var hyperlapse = new Hyperlapse(pano, {
+				lookat: lookat_point,
+				fov: 80,
+				millis: 50,
+				width: window.innerWidth,
+				height: window.innerHeight,
+				zoom: 2,
+				use_lookat: true,
+				distance_between_points: 5,
+				max_points: 100,
+				elevation: _elevation
+			});
+			
+			
+			hyperlapse.onError = function(e) {
+				show( "ERROR: "+ e.message );
+			};
+			hyperlapse.onRouteProgress = function(e) {
+				_route_markers.push( new google.maps.Marker({
+					position: e.point.location,
+					draggable: false,
+					icon: "/static/img/dot_marker.png",
+					map: map
+					})
+				);
+			};
+			hyperlapse.onRouteComplete = function(e) {
+				directions_renderer.setDirections(e.response);
+				show( "Number of Points: "+ hyperlapse.length() );
+				hyperlapse.load();
+			};
+			hyperlapse.onLoadProgress = function(e) {
+				show( "Loading: "+ (e.position+1) +" of "+ hyperlapse.length() );
+			};
+			hyperlapse.onLoadComplete = function(e) {
+				show( "" +
+					"Start: " + start_pin.getPosition().toString() + 
+					"<br>End: " + end_pin.getPosition().toString() + 
+					"<br>Lookat: " + pivot_pin.getPosition().toString() + 
+					"<br>Ready." );
+			};
+			hyperlapse.onFrame = function(e) {
+				show( "" +
+					"Start: " + start_pin.getPosition().toString() + 
+					"<br>End: " + end_pin.getPosition().toString() + 
+					"<br>Lookat: " + pivot_pin.getPosition().toString() + 
+					"<br>Position: "+ (e.position+1) +" of "+ hyperlapse.length() );
+				camera_pin.setPosition(e.point.location);
+			};
+			pano.addEventListener( 'mousedown', function(e){
+				e.preventDefault();
+				is_moving = true;
+				onPointerDownPointerX = e.clientX;
+				onPointerDownPointerY = e.clientY;
+				px = hyperlapse.position.x;
+				py = hyperlapse.position.y;
+			}, false );
+			pano.addEventListener( 'mousemove', function(e){
+				e.preventDefault();
+				var f = hyperlapse.fov() / 500;
+				if ( is_moving ) {
+					var dx = ( onPointerDownPointerX - e.clientX ) * f;
+					var dy = ( e.clientY - onPointerDownPointerY ) * f;
+					hyperlapse.position.x = px + dx; // reversed dragging direction (thanks @mrdoob!)
+					hyperlapse.position.y = py + dy;
+					o.position_x = hyperlapse.position.x;
+					o.position_y = hyperlapse.position.y;
+				}
+			}, false );
+			pano.addEventListener( 'mouseup', function(){
+				is_moving = false;
+				hyperlapse.position.x = px;
+				//hyperlapse.position.y = py;
+			}, false );
+			
+			/* Dat GUI */
+			var gui = new dat.GUI();
+			var o = {
+				distance_between_points:10, 
+				max_points:100, 
+				fov: 80, 
+				elevation:Math.floor(_elevation), 
+				tilt:0, 
+				millis:50, 
+				offset_x:0,
+				offset_y:0,
+				offset_z:0,
+				position_x:0,
+				position_y:0,
+				use_lookat:true,
+				screen_width: window.innerWidth,
+				screen_height: window.innerHeight,
+				generate:function(){
+					show( "Generating route..." );
+					directions_renderer.setDirections({routes: []});
+					var marker;
+					while(_route_markers.length > 0) {
+						marker = _route_markers.pop();
+						marker.setMap(null);
+					}
+					request = {
+						origin: start_point, 
+						destination: end_point, 
+						travelMode: google.maps.DirectionsTravelMode.DRIVING
+					};
+					directions_service.route(request, function(response, status) {
+						if (status == google.maps.DirectionsStatus.OK) {   
+							hyperlapse.generate({route: response});
+						} else {
+							console.log(status);
+						}
+					})
+				},
+				drop_pins:function(){
+					var bounds = map.getBounds();
+					var top_left = bounds.getNorthEast();
+					var bot_right = bounds.getSouthWest();
+					var hdif = Math.abs(top_left.lng() - bot_right.lng());
+					var spacing = hdif/4;
+					var center = map.getCenter();
+					var c1 = new google.maps.LatLng(center.lat(), center.lng()-spacing);
+					var c2 = new google.maps.LatLng(center.lat(), center.lng());
+					var c3 = new google.maps.LatLng(center.lat(), center.lng()+spacing);
+					hyperlapse.lookat = c2;
+					pivot_pin.setPosition(c2);
+					snapToRoad(c1, function(result1) {
+						start_pin.setPosition(result1);
+						start_point = result1;
+						snapToRoad(c3, function(result3) {
+							end_pin.setPosition(result3);
+							end_point = result3;
+							changeHash();
+						});
+					});
+				}
+			};
+			var scn = gui.addFolder('screen');
+			scn.add(o, 'screen_width', window.innerHeight).listen();
+			scn.add(o, 'screen_height', window.innerHeight).listen();
+			var parameters = gui.addFolder('parameters');
+			var distance_between_points_control = parameters.add(o, 'distance_between_points', 5, 100);
+			distance_between_points_control.onChange(function(value) {
+				hyperlapse.setDistanceBetweenPoint(value);
+			});
+			var max_points = parameters.add(o, 'max_points', 10, 300);
+			max_points.onChange(function(value) {
+				hyperlapse.setMaxPoints(value);
+			});
+			var fov_control = parameters.add(o, 'fov', 1, 180);
+			fov_control.onChange(function(value) {
+				hyperlapse.setFOV(value);
+			});
+			var pitch_control = parameters.add(o, 'elevation', -1000, 1000);
+			pitch_control.onChange(function(value) {
+				_elevation = value;
+				hyperlapse.elevation_offset = value;
+				changeHash();
+			});
+			var millis_control = parameters.add(o, 'millis', 10, 250);
+			millis_control.onChange(function(value) {
+				hyperlapse.millis = value;
+			});
+			var offset_x_control = parameters.add(o, 'offset_x', -360, 360);
+			offset_x_control.onChange(function(value) {
+				hyperlapse.offset.x = value;
+			});
+			var offset_y_control = parameters.add(o, 'offset_y', -180, 180);
+			offset_y_control.onChange(function(value) {
+				hyperlapse.offset.y = value;
+			});
+			var offset_z_control = parameters.add(o, 'offset_z', -360, 360);
+			offset_z_control.onChange(function(value) {
+				hyperlapse.offset.z = value;
+			});
+			var position_x_control = parameters.add(o, 'position_x', -360, 360).listen();
+			position_x_control.onChange(function(value) {
+				hyperlapse.position.x = value;
+			});
+			var position_y_control = parameters.add(o, 'position_y', -180, 180).listen();
+			position_y_control.onChange(function(value) {
+				hyperlapse.position.y = value;
+			});
+			var tilt_control = parameters.add(o, 'tilt', -Math.PI, Math.PI);
+			tilt_control.onChange(function(value) {
+				hyperlapse.tilt = value;
+			});
+			var lookat_control = parameters.add(o, 'use_lookat')
+			lookat_control.onChange(function(value) {
+				hyperlapse.use_lookat = value;
+			});
+			parameters.open();
+			
+			var play_controls = gui.addFolder('play controls');
+			play_controls.add(hyperlapse, 'play');
+			play_controls.add(hyperlapse, 'pause');
+			play_controls.add(hyperlapse, 'next');
+			play_controls.add(hyperlapse, 'prev');
+			play_controls.open();
+			gui.add(o, 'drop_pins');
+			gui.add(o, 'generate');
+			gui.add(hyperlapse, 'load');
+			window.addEventListener('resize', function(){
+				hyperlapse.setSize(window.innerWidth, window.innerHeight);
+				o.screen_width = window.innerWidth;
+				o.screen_height = window.innerHeight;
+			}, false);
+			var show_ui = true;
+			document.addEventListener( 'keydown', onKeyDown, false );
+			function onKeyDown ( event ) {
+				switch( event.keyCode ) {
+					case 72: /* H */
+						show_ui = !show_ui;
+						document.getElementById("controls").style.opacity = (show_ui)?1:0;
+						break;
+					case 190: /* > */
+						hyperlapse.next();
+						break;
+					case 188: /* < */
+						hyperlapse.prev();
+						break;
+				}
+			};
+			o.generate();
 		}
-
-		function loadNextPano(data, status) {
-			var position = data.location.latLng;
-			currentPano.setPosition(data.location.latLng);
-			map.setStreetView(currentPano);
-		}
-
-		function updateStep() {
-			// check coordinates of currentPano and compare to current routeStep
-			// if currentPano location is further along route than the current routeStep, advance routeStep
-		}
-
-		function stepForward() {
-			routeStep++;
-			currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
-								getCurrentStepBearing());
-		}
-
-		function stepBackward() {
-			routeStep--;
-			currentPano = createStreetPanorama(routePath[routeStep]['k'], routePath[routeStep]['D'],
-								 getCurrentStepBearing());
-		}
-
-		function getCurrentStepBearing() {
-			return getBearing(routePath[routeStep]['k'], routePath[routeStep]['D'],
-							  routePath[routeStep+1]['k'], routePath[routeStep+1]['D']);
-		}
-
-		/**
-		* Calculate the bearing between two positions as a value from 0-360
-		*
-		* @param lat1 - The latitude of the first position
-		* @param lng1 - The longitude of the first position
-		* @param lat2 - The latitude of the second position
-		* @param lng2 - The longitude of the second position
-		*
-		* @return int - The bearing between 0 and 360
-		*/
-		function getBearing(lat1, lng1, lat2, lng2) {
-			var dLon = (lng2-lng1);
-			var y = Math.sin(dLon) * Math.cos(lat2);
-			var x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-			var brng = this._toDeg(Math.atan2(y, x));
-			return 360 - ((brng + 360) % 360);
-		}
-
-		/**
-		* Since not all browsers implement this we have our own utility that will
-		* convert from degrees into radians
-		*
-		* @param deg - The degrees to be converted into radians
-		* @return radians
-		*/
-		function _toRad(deg) {
-			return deg * Math.PI / 180;
-		}
-
-		/**
-		* Since not all browsers implement this we have our own utility that will
-		* convert from radians into degrees
-		*
-		* @param rad - The radians to be converted into degrees
-		* @return degrees
-		*/
-		function _toDeg(rad) {
-			return rad * 180 / Math.PI;
-		}
-		
-		$(document).on('click', '#startBtn', function(event){
-			driveRoute();
-		});
-
-		$(document).on('click', '#stopBtn', function(event){
-			stopRoute();
-		});
-
-		$(document).on('click', '#pano', function(event){
-			stopRoute();
-		});
-
-		$(document).on('click', '#forwardBtn', function(event){
-			stepForward();
-		});
-
-		$(document).on('click', '#backwardBtn', function(event){
-			stepBackward();
-		});
-
-	</script>
+		window.onload = init;
+	</script> 
 {% endblock %}
